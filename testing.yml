@@ -1,0 +1,24 @@
+---
+# Test docker-py compatibility
+
+- name: install python
+  hosts: all
+  tasks:
+   - apt: pkg={{ item }} state=present
+     with_items:
+      - python
+      - python-dev
+      - python-setuptools
+   - easy_install: name=pip
+
+- name: Test old docker-py
+  hosts: all
+  tasks:
+   - pip: name=docker-py version=1.1.0
+   - command: python -c "from docker import Client; client=Client(base_url='unix://var/run/docker.sock'); print client.info()"
+
+- name: Install new docker-py
+  hosts: all
+  tasks:
+   - pip: name=docker-py state=latest
+   - command: python -c "from docker import Client; client=Client(base_url='unix://var/run/docker.sock'); print client.info()"

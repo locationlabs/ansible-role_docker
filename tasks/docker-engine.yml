@@ -1,0 +1,27 @@
+---
+# Install docker engine.
+#
+# This is one of at least two mechanisms for installing Docker via apt (the other
+# being the `lxc-docker` package). There is currently only one version of `docker-engine`
+# available, so this mechanism will only work for the most recent `docker_version`,
+# currently `1.8.1`.
+#
+# Installing this docker will remove the lxc-docker package.
+
+
+- name: Add Docker Engine Repository Key
+  command: apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 58118E89F3A912897C070ADBF76221572C52609D
+
+- name: Add Docker Engine Repository
+  apt_repository:
+    repo: 'deb https://apt.dockerproject.org/repo ubuntu-trusty main'
+    update_cache: yes
+
+
+# While wildcarding the version is cute, in practice, there only seems to be one
+# version of Docker available at a time. I'm not sure what will happen on the next
+# release. Alternatively, we could install LXC Docker, which does have many more
+# versions, but not the most recent versions.
+
+- name: Install Docker Engine
+  apt: name="docker-engine={{ docker_version }}-0~trusty" state=present
