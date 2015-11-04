@@ -1,0 +1,21 @@
+---
+# Install LXC docker.
+#
+# This is one of at least two mechanisms for installing Docker via apt (the other
+# being the `docker-engine` package). There are multiple versions of `lxc-docker`
+# available, but we currently only use this mechanism if `docker_version` is set
+# to `1.5.0`.
+#
+# Installing this docker will remove the docker-engine package.
+
+
+- name: Add LXC Docker Repository Key
+  command: apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 36A1D7869245C8950F966E92D8576A8BA88D21E9
+
+- name: Add LXC Docker Repository
+  apt_repository:
+    repo: 'deb http://get.docker.io/ubuntu docker main'
+    update_cache: yes
+
+- name: Install LXC Docker
+  apt: pkg="lxc-docker-{{ docker_version }}" state=present
