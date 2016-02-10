@@ -10,7 +10,9 @@
 
 
 - name: Add Docker Engine Repository Key
-  command: apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 58118E89F3A912897C070ADBF76221572C52609D
+  apt_key:
+    keyserver: "hkp://p80.pool.sks-keyservers.net:80"
+    id: "58118E89F3A912897C070ADBF76221572C52609D"
 
 - name: Add Docker Engine Repository
   apt_repository:
@@ -25,3 +27,11 @@
 
 - name: Install Docker Engine
   apt: name="docker-engine={{ docker_version }}-0~trusty" state=present
+  register: docker_engine_install
+
+# If this was the first time Docker was installed, when we gathered facts about
+# the system, we would not have seen the "ansible_docker0" interface, as it wasn't
+# present at the time. Now it is, so re-read facts.
+- name: reread facts about ansible_docker0
+  setup: filter=ansible_docker0
+  when: docker_engine_install|changed
