@@ -16,7 +16,7 @@
 
 - name: Add Docker Engine Repository
   apt_repository:
-    repo: 'deb https://apt.dockerproject.org/repo ubuntu-trusty main'
+    repo: 'deb https://apt.dockerproject.org/repo ubuntu-{{ ansible_distribution_release }} main'
     update_cache: yes
 
 
@@ -26,7 +26,7 @@
 # versions, but not the most recent versions.
 
 - name: Install Docker Engine
-  apt: name="docker-engine={{ docker_version }}-0~trusty" state=present
+  apt: name="docker-engine={{ docker_version }}-0~{{ ansible_distribution_release }}" state=present
   register: docker_engine_install
 
 # If this was the first time Docker was installed, when we gathered facts about
