@@ -14,7 +14,7 @@
 
 - name: Add LXC Docker Repository
   apt_repository:
-    repo: 'deb http://get.docker.io/ubuntu docker main'
+    repo: 'deb https://get.docker.io/ubuntu docker main'
     update_cache: yes
 
 - name: Install LXC Docker
