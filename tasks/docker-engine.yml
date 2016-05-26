@@ -2,12 +2,13 @@
 # Install docker engine.
 #
 # This is one of at least two mechanisms for installing Docker via apt (the other
-# being the `lxc-docker` package). There is currently only one version of `docker-engine`
-# available, so this mechanism will only work for the most recent `docker_version`,
-# currently `1.8.1`.
+# being the `lxc-docker` package).
+#
+# Docker org now seems to be keeping multiple versions of Docker in their repo, as opposed
+# to when they initially launched, when there was only one version there. So this can be
+# reasonably expected to work for a good range of Docker versions.
 #
 # Installing this docker will remove the lxc-docker package.
-
 
 - name: Add Docker Engine Repository Key
   apt_key:
@@ -19,15 +20,23 @@
     repo: 'deb https://apt.dockerproject.org/repo ubuntu-{{ ansible_distribution_release }} main'
     update_cache: yes
 
+- name: ensure docker config directory exists
+  file: name=/etc/docker state=directory
 
-# While wildcarding the version is cute, in practice, there only seems to be one
-# version of Docker available at a time. I'm not sure what will happen on the next
-# release. Alternatively, we could install LXC Docker, which does have many more
-# versions, but not the most recent versions.
+# write the config file before we install the package, so we can save a restart if possible.
+- name: write docker configuration file
+  copy:
+    dest: /etc/docker/daemon.json
+    content: "{{ docker_configuration_content | to_nice_json }}"
+  register: docker_config_file_update
 
 - name: Install Docker Engine
   apt: name="docker-engine={{ docker_version }}-0~{{ ansible_distribution_release }}" state=present
   register: docker_engine_install
+
+- name: restart Docker after config changed
+  service: name=docker state=restarted
+  when: docker_config_file_update|changed and not docker_engine_install|changed
 
 # If this was the first time Docker was installed, when we gathered facts about
 # the system, we would not have seen the "ansible_docker0" interface, as it wasn't

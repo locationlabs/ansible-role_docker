@@ -3,7 +3,7 @@ docker
 
 Installs Docker on Ubuntu.
 
-Well tested on 14.04. Has been known to work on 12.04.
+Well tested on 14.04. Has been known to work on 12.04 and 16.04.
 
 This role started from the *angstwad* *docker_ubuntu* role and has since forked a bit, primarily
 to manage which version of Docker we install. Because of interdepencies between the Docker API
@@ -21,7 +21,12 @@ Role Variables
 The `docker_version` variable controls what version of Docker is installed.
 
  -  The default `docker_version` is `1.5.0` (for historical reasons). If select, LXC Docker will be used.
- -  Otherwise, the stated version of Docker Engine will be used (if available).
+ -  Otherwise, the stated version of Docker Engine will be used. (If not available, install will fail.)
+
+The `docker_configuration_content` variable may be specified; if so, then the YML content will be converted
+to JSON and stored in /etc/docker/daemon.json. If the file changes, the daemon will be restarted. This allows
+users to specify Docker daemon coonfiguration. For more info, see:
+https://docs.docker.com/engine/reference/commandline/daemon/#daemon-configuration-file
 
 
 Testing
