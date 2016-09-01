@@ -19,19 +19,60 @@
     repo: 'deb https://apt.dockerproject.org/repo ubuntu-{{ ansible_distribution_release }} main'
     update_cache: yes
 
+- name: see if docker is already installed
+  stat: path=/usr/bin/docker get_checksum=False
+  register: docker_exec_stat_result
+  always_run: True 
 
-# While wildcarding the version is cute, in practice, there only seems to be one
-# version of Docker available at a time. I'm not sure what will happen on the next
-# release. Alternatively, we could install LXC Docker, which does have many more
-# versions, but not the most recent versions.
+- name: Determine installed version
+  command: docker --version
+  changed_when: False
+  always_run: True
+  register: docker_version_result
+  when: "{{ docker_exec_stat_result.stat.exists }}"
 
+# "docker --version" output is formatted like this:
+#
+#     Docker version 1.10.2, build c3959b1
+#
+- name: store installed docker version
+  set_fact:
+    installed_docker_version: "{{ docker_version_result.stdout
+                                  | regex_replace('^Docker version ', '')
+                                  | regex_replace(', build [0-9a-f]+$', '') }}"
+  when: "{{ docker_exec_stat_result.stat.exists }}"
+
+- name: collect container data from before upgrade
+  collect_container_configs:
+  register: collect_container_configs_result
+  when: "{{ docker_exec_stat_result.stat.exists }}"
+ 
 - name: Install Docker Engine
   apt: name="docker-engine={{ docker_version }}-0~{{ ansible_distribution_release }}" state=present
   register: docker_engine_install
 
-# If this was the first time Docker was installed, when we gathered facts about
-# the system, we would not have seen the "ansible_docker0" interface, as it wasn't
-# present at the time. Now it is, so re-read facts.
+# Some updates will break data volumes. There are two issues:
+#  - if upgrading from <1.9 to 1.10+, then fix the vfs links. If we're upgrading to a 1.9.x client,
+#    the Docker upgrade fixes that automatically.
+#  - if upgrading from <1.10 to 1.10+, then fix the container configs for containers with volumes.
+- name: handle repair of data volumes broken by updates
+  repair_docker_data_volumes:
+    fix_vfs_links: "{{ installed_docker_version | version_compare('1.9', '<')
+                       and docker_version | version_compare('1.10', '>=') }}"
+    fix_container_mountpoints: "{{ installed_docker_version | version_compare('1.10', '<')
+                                   and docker_version | version_compare('1.10', '>=') }}"
+    old_container_configs: "{{ collect_container_configs_result.configs }}"
+  when: "{{ docker_engine_install | changed 
+            and docker_exec_stat_result.stat.exists
+            and docker_attempt_upgrade_fixes }}"
+  register: repair_docker_data_volumes_result
+
+- name: start docker after repair of docker settings
+  service: name=docker state=started
+  when: "{{ repair_docker_data_volumes_result is defined
+            and repair_docker_data_volumes_result | changed }}"
+
+# If we just installed or upgraded Docker, re-read Docker-related facts.
 - name: reread facts about ansible_docker0
   setup: filter=ansible_docker0
   when: docker_engine_install|changed

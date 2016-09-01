@@ -1,0 +1,65 @@
+#!/usr/bin/env python2.7
+
+import json
+import os
+import os.path
+
+DOCUMENTATION = '''
+---
+module: collect_container_configs
+short_description: collects container configuration data
+description:
+  - when run, this module collects the contents of container configuration files for
+    all current containers
+  - this can be run before an upgrade to store information that would be used after
+    an upgrade
+'''
+
+
+CONTAINER_ROOT_DIR = '/var/lib/docker/containers'
+CONFIG_V1_FILENAME = 'config.json'
+CONFIG_V2_FILENAME = 'config.v2.json'
+CONFIG_V3_FILENAME = 'config.v3.json'
+
+
+def main():
+    module = AnsibleModule(
+        argument_spec=dict(),
+        supports_check_mode=True)
+
+    configs = {}
+    config_versions = {}
+
+    for container in os.listdir(CONTAINER_ROOT_DIR):
+        container_path = os.path.join(CONTAINER_ROOT_DIR, container)
+        if not os.path.isdir(container_path):
+            # we only expect directories here. Ignore the unexpected
+            continue
+
+        config_path = os.path.join(container_path, CONFIG_V3_FILENAME)
+        if os.path.isfile(config_path):
+            version = 3
+        else:
+            config_path = os.path.join(container_path, CONFIG_V2_FILENAME)
+            if os.path.isfile(config_path):
+                version = 2
+            else:
+                config_path = os.path.join(container_path, CONFIG_V1_FILENAME)
+                if not os.path.isfile(config_path):
+                    continue
+                version = 1
+
+
+        with file(config_path, 'r') as f:
+            config = json.load(f)
+
+        configs[container] = config
+        config_versions[container] = version
+
+
+    module.exit_json(changed=False, configs=configs, config_versions=config_versions)
+
+
+from ansible.module_utils.basic import *
+if __name__ == '__main__':
+    main()

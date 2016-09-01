@@ -1,5 +1,10 @@
 ---
-docker_version: 1.5.0
+
+docker_version: 1.11.2
 kernel_pkg_state: latest
 cgroup_lite_pkg_state: latest
 ssh_port: 22
+
+docker_role_apt_cache_valid_time: 7200
+
+docker_attempt_upgrade_fixes: False
