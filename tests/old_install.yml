@@ -1,0 +1,15 @@
+---
+
+- hosts: all
+  vars:
+    docker_version: 1.5.0
+  roles:
+    # install very old version of Docker
+    - role: docker
+  tasks:
+    - name: verify that Docker is running
+      command: docker ps
+    - name: verify Docker client version
+      shell: "docker version | grep 'Client version: {{ docker_version }}'"
+    - name: verify Docker server version
+      shell: "docker version | grep 'Server version: {{ docker_version }}'"

@@ -13,6 +13,7 @@ description:
     all current containers
   - this can be run before an upgrade to store information that would be used after
     an upgrade
+  - this is returned as a single string containing parsable JSON.
 '''
 
 
@@ -30,34 +31,37 @@ def main():
     configs = {}
     config_versions = {}
 
-    for container in os.listdir(CONTAINER_ROOT_DIR):
-        container_path = os.path.join(CONTAINER_ROOT_DIR, container)
-        if not os.path.isdir(container_path):
-            # we only expect directories here. Ignore the unexpected
-            continue
+    if os.path.isdir(CONTAINER_ROOT_DIR):
+        for container in os.listdir(CONTAINER_ROOT_DIR):
+            container_path = os.path.join(CONTAINER_ROOT_DIR, container)
+            if not os.path.isdir(container_path):
+                # we only expect directories here. Ignore the unexpected
+                continue
 
-        config_path = os.path.join(container_path, CONFIG_V3_FILENAME)
-        if os.path.isfile(config_path):
-            version = 3
-        else:
-            config_path = os.path.join(container_path, CONFIG_V2_FILENAME)
+            config_path = os.path.join(container_path, CONFIG_V3_FILENAME)
             if os.path.isfile(config_path):
-                version = 2
+                version = 3
             else:
-                config_path = os.path.join(container_path, CONFIG_V1_FILENAME)
-                if not os.path.isfile(config_path):
-                    continue
-                version = 1
+                config_path = os.path.join(container_path, CONFIG_V2_FILENAME)
+                if os.path.isfile(config_path):
+                    version = 2
+                else:
+                    config_path = os.path.join(container_path, CONFIG_V1_FILENAME)
+                    if not os.path.isfile(config_path):
+                        continue
+                    version = 1
 
 
-        with file(config_path, 'r') as f:
-            config = json.load(f)
+            with file(config_path, 'r') as f:
+                config = json.load(f)
 
-        configs[container] = config
-        config_versions[container] = version
+            configs[container] = config
+            config_versions[container] = version
 
-
-    module.exit_json(changed=False, configs=configs, config_versions=config_versions)
+    module.exit_json(
+            changed=False,
+            configs=configs,
+            config_versions=config_versions)
 
 
 from ansible.module_utils.basic import *

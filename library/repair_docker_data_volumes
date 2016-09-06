@@ -3,8 +3,9 @@
 import json
 import os
 import os.path
-import subprocess
 import re
+import subprocess
+import types
 
 
 DOCUMENTATION = '''
@@ -158,7 +159,7 @@ class RewriteConfigOperation(object):
         return "updating config file {}".format(self.path)
 
 
-def fix_container_configs(module, skipped_volume_reasons):
+def fix_container_configs(module, old_container_configs, skipped_container_reasons):
 
     for container in os.listdir(CONTAINER_ROOT_DIR):
         container_path = os.path.join(CONTAINER_ROOT_DIR, container)
@@ -169,7 +170,7 @@ def fix_container_configs(module, skipped_volume_reasons):
         # verify that there's a v2 config file there
         config_v2_path = os.path.join(container_path, CONFIG_V2_FILENAME)
         if not os.path.isfile(config_v2_path):
-            skipped_volume_reasons.append('skipped {} because v2 path does not exist'.format(container))
+            skipped_container_reasons.append('skipped {} because v2 path does not exist'.format(container))
             continue
 
         # Future Docker updates may continue to change this file. If the Docker team does the
@@ -177,11 +178,11 @@ def fix_container_configs(module, skipped_volume_reasons):
         # now-non-functional 'config.v2.json' file in place. If so, skip this file.
         config_v3_path = os.path.join(container_path, CONFIG_V3_FILENAME)
         if os.path.isfile(config_v3_path):
-            skipped_volume_reasons.append('skipped {} because v3 path exists'.format(container))
+            skipped_container_reasons.append('skipped {} because v3 path exists'.format(container))
             continue
 
         # find pre-update config
-        old_config = module.params['old_container_configs'].get(container)
+        old_config = old_container_configs.get(container)
 
         # now read config JSON
         with file(config_v2_path, 'r') as f:
@@ -201,7 +202,7 @@ def fix_container_configs(module, skipped_volume_reasons):
         # and don't have a "MountPoints" key.
         if 'MountPoints' in config and config['MountPoints']:
             # there is already a "MountPoints" section, so ignore this container
-            skipped_volume_reasons.append('skipped {} because MountPoints exists'.format(container))
+            skipped_container_reasons.append('skipped {} because MountPoints exists'.format(container))
             continue
 
         if 'Volumes' in config:
@@ -216,7 +217,7 @@ def fix_container_configs(module, skipped_volume_reasons):
             volumes_rw = old_config['VolumesRW']
         else:
             # there are no volumes on this container, so there's nothing to do
-            skipped_volume_reasons.append('skipped {} because Volumes does not exist'.format(container))
+            skipped_container_reasons.append('skipped {} because Volumes does not exist'.format(container))
             continue
 
         # This config should turn into:
@@ -293,13 +294,28 @@ def main():
     # That's because, when we execute our operations, we shut down the docker daemon first -
     # but figuring out what to do, in some cases, requires us to query the docker daemon.
 
+    old_container_configs = module.params['old_container_configs']
+
+    if type(old_container_configs) == types.StringType:
+        with file('/var/tmp/config_after.json', 'w') as f:
+            f.write(old_container_configs)
+        try:
+            old_container_configs = json.loads(old_container_configs)
+        except ValueError, v:
+            module.fail_json(
+                    msg="failed parsing JSON config",
+                    changed=False,
+                    exception=str(v),
+                    old_container_configs=old_container_configs,
+                    tasks_performed=[])
+
     operations = []
     if module.params['fix_vfs_links']:
         operations += list(fix_volume_mount_missing_symlinks(module))
 
-    skipped_volume_reasons = []
+    skipped_container_reasons = []
     if module.params['fix_container_mountpoints']:
-        operations += list(fix_container_configs(module, skipped_volume_reasons))
+        operations += list(fix_container_configs(module, old_container_configs, skipped_container_reasons))
 
     if not operations:
         module.exit_json(changed=False, tasks_performed=[])
@@ -329,8 +345,8 @@ def main():
     module.exit_json(
             changed=True,
             tasks_performed=tasks_performed,
-            skipped_volume_reasons=skipped_volume_reasons,
-            old_container_configs=module.params['old_container_configs'])
+            skipped_container_reasons=skipped_container_reasons,
+            old_container_configs=old_container_configs)
 
 
 from ansible.module_utils.basic import *

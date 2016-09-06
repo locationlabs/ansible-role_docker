@@ -6,6 +6,10 @@
   fail: msg="{{ ansible_distribution_version }} is not an acceptable version of Ubuntu for this role"
   when: "ansible_distribution_version not in ['12.04', '13.04', '13.10', '14.04', '16.04']"
 
+- name: check that docker_version is set
+  fail: msg="Required variable \"docker_version\" is not defined."
+  when: "{{ docker_version is not defined }}"
+
 # https://docs.docker.com/installation/ubuntulinux/
 - name: Install trusty kernel onto 12.04
   apt:

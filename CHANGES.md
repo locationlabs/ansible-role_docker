@@ -6,6 +6,8 @@ Version 2.1:
    to a post-1.9.x version.
  - Add "docker_attempt_upgrade_fixes" configuration variable. This defaults to False;
    the upgrade fixes mentioned above won't be attempted unless it is set to True.
+ - Added automated tests in the "tests" directory - if you have Vagrant installed, they
+   can be run by "cd tests ; ./run_tests.sh".
 
 Version 2.0:
   - Port to github

@@ -31,9 +31,9 @@ The issues we attempt to resolve are documented in the "repair_docker_data_volum
 Role Variables
 --------------
 
-  - `docker_version` : this variable controls the version of Docker that is installed. The default
-    version is `1.11.2`. If version `1.5.0` is selected, LXC Docker will be used; otherwise the
-    stated version of Docker Engine will be installed (if available).
+  - `docker_version` : this variable controls the version of Docker that is installed. Required.
+    If version `1.5.0` is selected, LXC Docker will be used; otherwise the stated version of
+    Docker Engine will be installed (if available).
   - `docker_attempt_upgrade_fixes` : False by default. If True, the fixes described in "Upgrade
     Support" will be attempted
   - `cgroup_lite_pkg_state` : When installing on an Ubuntu 13.10 host, the role will install the
@@ -49,15 +49,8 @@ Role Variables
 Testing
 -------
 
-There are known incompatibilities between some Docker versions and some versions of `docker-py`,
-especially between LXC Docker `1.5.0` and `docker-py>1.1.0`. Using this combination will
-result in Python errors along the lines of:
-
-    client and server don't have same version (client : 1.19, server: 1.17)
-
-Fortunately, newer versions of Docker Engine with both newer and older versions of `docker-py`
-appear to be compatible. A `testing.yml` playbook is provided for reference.
-
+There's a directory "tests" with some Ansible playbooks that can be used for verifying role
+behavior. See tests/TESTS.md for more information.
 
 License
 -------
