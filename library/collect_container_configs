@@ -18,9 +18,13 @@ description:
 
 
 CONTAINER_ROOT_DIR = '/var/lib/docker/containers'
-CONFIG_V1_FILENAME = 'config.json'
-CONFIG_V2_FILENAME = 'config.v2.json'
-CONFIG_V3_FILENAME = 'config.v3.json'
+
+
+CONFIG_FILENAME_OPTIONS = [
+    ('config.v3.json', 3),
+    ('config.v2.json', 2),
+    ('config.json', 1)
+]
 
 
 def main():
@@ -38,19 +42,13 @@ def main():
                 # we only expect directories here. Ignore the unexpected
                 continue
 
-            config_path = os.path.join(container_path, CONFIG_V3_FILENAME)
-            if os.path.isfile(config_path):
-                version = 3
-            else:
-                config_path = os.path.join(container_path, CONFIG_V2_FILENAME)
+            for basename, version in CONFIG_FILENAME_OPTIONS:
+                config_path = os.path.join(container_path, basename)
                 if os.path.isfile(config_path):
-                    version = 2
-                else:
-                    config_path = os.path.join(container_path, CONFIG_V1_FILENAME)
-                    if not os.path.isfile(config_path):
-                        continue
-                    version = 1
-
+                    break
+            else:
+                # no config file was found
+                continue
 
             with file(config_path, 'r') as f:
                 config = json.load(f)

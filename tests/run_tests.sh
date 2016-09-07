@@ -57,10 +57,12 @@ function run_upgrade_test() {
 }
 
 before_run
+RESULTS=""
 for TEST in ${TESTS:-$ALL_TESTS} ; do
    echo "Running test \"$TEST\""
    before_test
    run_${TEST}_test
+   RESULTS="${RESULTS}Test $TEST : result $?\n"
    after_test
 done
-
+echo -e "$RESULTS"
