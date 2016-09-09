@@ -3,18 +3,20 @@
 - hosts: all
   vars:
     docker_version: 1.12.1
-    ob: '{'
   roles:
-    # install very old version of Docker
+    # install recent version of Docker
     - role: docker
   tasks:
     - name: verify that Docker is running and accessible
       command: docker ps
     - name: get docker client version
-      command: "docker version -f '{{ ob }}{ .Client.Version }}'"
+      # The command we want to run has "{{" in it, but we don't want Ansible to try to template
+      # it. We use a shell variable to store an open brace, so there's never an Ansible
+      # variable - before or after the operation - that has '{{' in it.
+      shell: 'OB="{" && docker version -f "$OB$OB .Client.Version }}"'
       register: docker_client_version_result
     - name: get docker client version
-      command: "docker version -f '{{ ob }}{ .Server.Version }}'"
+      shell: 'OB="{" && docker version -f "$OB$OB .Server.Version }}"'
       register: docker_server_version_result
     - name: check version results
       assert:
