@@ -1,5 +1,5 @@
 Version 2.1:
- - Change default Docker version to 1.11.2, was 1.5.0
+ - Removed default docker version; "docker_version" is now a required variable.
  - Attempt to handle data volume loss when we update from pre-1.10 to post-1.10.
    See: https://github.com/docker/docker/issues/20079
  - Attempt to handle missing volume symlinks when we upgrade pre-1.9 data volumes
