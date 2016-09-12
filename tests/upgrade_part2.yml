@@ -1,0 +1,38 @@
+---
+
+# playbook #2 in the upgrade test.
+- hosts: all
+  tasks:
+    - name: grab old volume ID
+      command: ls /var/lib/docker/vfs/dir
+      register: vfs_dir_result
+    - name: store old volume ID
+      set_fact:
+        old_volume_id: "{{ vfs_dir_result.stdout }}"
+
+- hosts: all
+  roles:
+    - role: docker
+      docker_version: 1.11.2
+      docker_attempt_upgrade_fixes: True
+  tasks:
+    - name: read something from volume ID
+      command: "docker run --rm --volume {{ old_volume_id }}:/foo busybox cat /foo/cpuinfo"
+    - name: read something from unmapped volume as new container
+      command: docker run --rm --volumes-from volume-owner busybox stat /opt/some/volume/cpuinfo
+    - name: read something from mapped volume as new container
+      command: docker run --rm --volumes-from volume-owner busybox stat /externalstuff/alternatives/README
+    - name: create a new container that uses data volume
+      command: docker create --name volume-user2 --volumes-from volume-owner busybox sleep 9999m
+    - name: start new container that uses data volume
+      command: docker start volume-user2
+    - name: read something from unmapped volume while execed as new container that uses volume
+      command: docker exec volume-user2 stat /opt/some/volume/cpuinfo
+    - name: read something from mapped volume while execed as new container that uses volume
+      command: docker exec volume-user2 stat /externalstuff/alternatives/README
+    - name: start old container that uses data volume
+      command: docker start volume-user
+    - name: read something from unmapped volume while execed as old container that uses volume
+      command: docker exec volume-user stat /opt/some/volume/cpuinfo
+    - name: read something from mapped volume while execed as old container that uses volume
+      command: docker exec volume-user stat /externalstuff/alternatives/README

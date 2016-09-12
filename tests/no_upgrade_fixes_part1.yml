@@ -1,0 +1,20 @@
+---
+
+# playbook #1 for a test that runs an install without any upgrade fixes.
+- hosts: all
+  roles:
+    - role: docker
+      docker_version: 1.5.0
+  tasks:
+    - name: copy busybox tar to destination
+      copy: src=busybox.tar dest=/var/tmp/busybox.tar
+    - name: import busybox tar
+      command: docker load -i /var/tmp/busybox.tar
+    - name: create a container with mapped and unmapped volume
+      command: docker create --name volume-owner --volume /opt/some/volume --volume /etc/alternatives:/externalstuff/alternatives busybox
+    - name: write something to unmapped volume
+      command: docker run --rm --volumes-from volume-owner busybox cp /proc/cpuinfo /opt/some/volume/cpuinfo
+    - name: create a container that uses data volume
+      command: docker create --name volume-user --volumes-from volume-owner busybox sleep 9999m
+    - name: start container that uses data volume
+      command: docker start volume-user
