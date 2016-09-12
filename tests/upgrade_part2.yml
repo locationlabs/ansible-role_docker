@@ -1,5 +1,6 @@
 ---
 
+# playbook #2 in the upgrade test.
 - hosts: all
   tasks:
     - name: grab old volume ID

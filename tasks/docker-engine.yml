@@ -45,7 +45,8 @@
 - name: collect container data from before upgrade
   collect_container_configs:
   register: collect_container_configs_result
-  when: "{{ docker_exec_stat_result.stat.exists }}"
+  when: "{{ docker_exec_stat_result.stat.exists
+            and docker_attempt_upgrade_fixes }}"
  
 - name: Install Docker Engine
   apt: name="docker-engine={{ docker_version }}-0~{{ ansible_distribution_release }}" state=present
