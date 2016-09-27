@@ -1,3 +1,7 @@
+Version 2.1.1:
+ - Stop the "docker" service before attempting a package upgrade, to prevent an intermittent
+   upgrade failure.
+
 Version 2.1:
  - Removed default docker version; "docker_version" is now a required variable.
  - Attempt to handle data volume loss when we update from pre-1.10 to post-1.10.
