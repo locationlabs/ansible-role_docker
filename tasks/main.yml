@@ -8,7 +8,7 @@
 
 - name: check that docker_version is set
   fail: msg="Required variable \"docker_version\" is not defined."
-  when: "{{ docker_version is not defined }}"
+  when: docker_version is not defined
 
 # https://docs.docker.com/installation/ubuntulinux/
 - name: Install trusty kernel onto 12.04
@@ -64,11 +64,11 @@
 
 - name: Install LXC Docker
   include: lxc-docker.yml
-  when: "{{ docker_version == '1.5.0' }}"
+  when: docker_version == '1.5.0'
 
 - name: Install Docker Engine
   include: docker-engine.yml
-  when: "{{ docker_version != '1.5.0' }}"
+  when: docker_version != '1.5.0'
 
 - name: Ensure that Docker is running
   service: name="docker" state=started
