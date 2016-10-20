@@ -1,5 +1,6 @@
 #!/usr/bin/env python2.7
 
+from difflib import Differ
 import json
 import os
 import os.path
@@ -55,7 +56,7 @@ options:
   old_container_configs:
     description:
       - config data from containers, before the package update
-    required: true
+    required: false
 '''
 
 CONTAINER_ROOT_DIR = '/var/lib/docker/containers'
@@ -142,21 +143,30 @@ def fix_volume_mount_missing_symlinks(module):
 
 
 class RewriteConfigOperation(object):
-    def __init__(self, path, backup_path, updated_content):
+    def __init__(self, path, backup_path, original_content, updated_content):
         self.path = path
         self.backup_path = backup_path
+        self.original_content = original_content
         self.updated_content = updated_content
 
     def run(self, module):
         old_stat = os.stat(self.path)
         os.rename(self.path, self.backup_path)
         with open(self.path, 'w') as f:
-            f.write(self.updated_content)
+            f.write(json.dumps(self.updated_content))
         os.chmod(self.path, old_stat.st_mode)
         os.chown(self.path, old_stat.st_uid, old_stat.st_gid)
 
     def desc(self):
-        return "updating config file {}".format(self.path)
+        pretty_original_json_string = json.dumps(self.original_content, indent=3, sort_keys=True)
+        pretty_updated_json_string = json.dumps(self.updated_content, indent=3, sort_keys=True)
+        d = Differ()
+
+        diffs = list(d.compare(pretty_original_json_string.splitlines(True),
+                   pretty_updated_json_string.splitlines(True)))
+
+        return {'desc': "updating config file {}".format(self.path),
+                'diffs': diffs}
 
 
 def fix_container_configs(module, old_container_configs, skipped_container_reasons):
@@ -185,9 +195,11 @@ def fix_container_configs(module, old_container_configs, skipped_container_reaso
         # find pre-update config
         old_config = old_container_configs.get(container)
 
-        # now read config JSON
+        # now read config JSON; read it twice so we have a backup copy
         with file(config_v2_path, 'r') as f:
             config = json.load(f)
+        with file(config_v2_path, 'r') as f:
+            pre_config = json.load(f)
 
         # What we're looking for is images that have a config section like this:
         #
@@ -211,7 +223,13 @@ def fix_container_configs(module, old_container_configs, skipped_container_reaso
             # there is a "Volumes" key in the current config, migrate that data
             volumes = config['Volumes']
             volumes_rw = config['VolumesRW']
-        elif 'Volumes' in old_config:
+
+            if volumes is None:
+                skipped_container_reasons.append(
+                    'skipped {} because Volumes key has None type'.format(container))
+                continue
+
+        elif old_config and 'Volumes' in old_config:
             # there is no volume data in the current config, but it's there in the old config.
             # We see this in containers that use "--volumes-from".
             # Use the old data
@@ -279,10 +297,13 @@ def fix_container_configs(module, old_container_configs, skipped_container_reaso
                     'Relabel': '',
                     'Source': external_path
                 }
+        if not mountpoints:
+            continue
+
         config['MountPoints'] = mountpoints
 
         backup_path = os.path.join(container_path, BACKUP_FILENAME)
-        yield RewriteConfigOperation(config_v2_path, backup_path, json.dumps(config))
+        yield RewriteConfigOperation(config_v2_path, backup_path, pre_config, config)
 
 
 def main():
@@ -290,7 +311,7 @@ def main():
         argument_spec=dict(
             fix_vfs_links=dict(required=True, type='bool'),
             fix_container_mountpoints=dict(required=True, type='bool'),
-            old_container_configs=dict(required=True)),
+            old_container_configs=dict(required=False, default={})),
         supports_check_mode=True)
 
     # We need to figure out what to do before doing it.
@@ -298,7 +319,6 @@ def main():
     # but figuring out what to do, in some cases, requires us to query the docker daemon.
 
     old_container_configs = module.params['old_container_configs']
-
     if isinstance(old_container_configs, basestring):
         with file('/var/tmp/config_after.json', 'w') as f:
             f.write(old_container_configs)
