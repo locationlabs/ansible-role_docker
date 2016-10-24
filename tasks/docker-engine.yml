@@ -47,6 +47,7 @@
   register: collect_container_configs_result
   when: "{{ docker_exec_stat_result.stat.exists
             and docker_attempt_upgrade_fixes }}"
+  always_run: True
 
 # It should be OK to just run the apt install of the new docker package, regardless of the
 # state of docker. However, there's an issue that sometimes occurs in that case, where the
@@ -58,7 +59,10 @@
   when: "{{ docker_exec_stat_result.stat.exists and installed_docker_version != docker_version }}"
  
 - name: Install Docker Engine
-  apt: name="docker-engine={{ docker_version }}-0~{{ ansible_distribution_release }}" state=present
+  apt:
+    name: "docker-engine={{ docker_version }}-0~{{ ansible_distribution_release }}"
+    state: present
+    dpkg-options: "force-confnew"
   register: docker_engine_install
 
 # Some updates will break data volumes. There are two issues:

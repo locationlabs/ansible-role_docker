@@ -1,3 +1,7 @@
+Version 2.1.2:
+ - Pass the "--force-confnew" flag to dpkg when installing the Docker package, to make
+   sure configuration files are replaced even if they have been edited.
+
 Version 2.1.1:
  - Stop the "docker" service before attempting a package upgrade, to prevent an intermittent
    upgrade failure.
