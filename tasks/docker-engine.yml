@@ -62,7 +62,7 @@
   apt:
     name: "docker-engine={{ docker_version }}-0~{{ ansible_distribution_release }}"
     state: present
-    dpkg-options: "force-confnew"
+    dpkg_options: "force-confnew"
   register: docker_engine_install
 
 # Some updates will break data volumes. There are two issues:
