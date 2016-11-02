@@ -42,7 +42,7 @@ function after_test() {
    vagrant destroy -f
 }
 
-ALL_TESTS="old_install new_install upgrade no_upgrade_fixes"
+ALL_TESTS="old_install new_install restart_on_config_change"
 
 function run_old_install_test() {
    run_ansible_playbook old_install.yml
@@ -52,15 +52,11 @@ function run_new_install_test() {
    run_ansible_playbook new_install.yml
 }
 
-function run_upgrade_test() {
-   run_ansible_playbook upgrade_part1.yml && \
-      run_ansible_playbook upgrade_part2.yml
+function run_restart_on_config_change_test() {
+   run_ansible_playbook new_install.yml && \
+      run_ansible_playbook restart_on_config_change_test.yml
 }
 
-function run_no_upgrade_fixes_test() {
-   run_ansible_playbook no_upgrade_fixes_part1.yml && \
-      run_ansible_playbook no_upgrade_fixes_part2.yml
-}
 
 before_run
 RESULTS=""

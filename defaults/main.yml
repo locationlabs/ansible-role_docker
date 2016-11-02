@@ -6,4 +6,5 @@ ssh_port: 22
 
 docker_role_apt_cache_valid_time: 7200
 
-docker_attempt_upgrade_fixes: False
+# These flags are passed to the Docker daemon on startup.
+docker_daemon_flags: ""

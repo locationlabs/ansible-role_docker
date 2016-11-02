@@ -1,0 +1,27 @@
+---
+- hosts: all
+  tasks:
+    - name: get docker process PID
+      command: "pgrep -f '/usr/bin/dockerd --raw-logs'"
+      register: r_docker_pid
+
+- hosts: all
+  vars:
+    # same version as already installed
+    docker_version: 1.12.1
+    # .... but different config
+    docker_daemon_flags: "--log-opt max-file=3"
+  roles:
+    # run docker role, should restart
+    - role: docker
+
+- hosts: all
+  tasks:
+    # will fail if there's no docker process running with matching command line
+    - name: get new docker process PID
+      command: "pgrep -f '/usr/bin/dockerd --log-opt max-file=3 --raw-logs'"
+      register: r_new_docker_pid
+    - assert:
+        that: r_docker_pid.stdout != r_new_docker_pid.stdout
+
+
