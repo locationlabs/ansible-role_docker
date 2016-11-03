@@ -24,4 +24,3 @@
     name: "docker-engine={{ docker_version }}-0~{{ ansible_distribution_release }}"
     state: present
   register: r_docker_package_install
-

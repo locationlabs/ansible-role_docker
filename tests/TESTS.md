@@ -18,4 +18,3 @@ To run all tests:
 To run a specific test:
 
   TESTS=upgrade ./run_tests.sh
-

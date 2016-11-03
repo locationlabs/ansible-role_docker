@@ -77,7 +77,7 @@
 # if we changed the config, but didn't reinstall docker, then restart it
 - name: Restart docker on config change
   service: name=docker state=restarted
-  when: r_etc_default_docker.changed and not r_docker_package_install.changed
+  when: r_etc_default_docker|changed and not r_docker_package_install|changed
 
 - name: Ensure that Docker is running
   service: name="docker" state=started
@@ -96,4 +96,3 @@
     regexp: "^DEFAULT_FORWARD_POLICY="
     line: "DEFAULT_FORWARD_POLICY=\"ACCEPT\""
   when: ufw_default_exists.stat.exists
-

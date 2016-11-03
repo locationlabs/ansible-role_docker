@@ -23,5 +23,3 @@
       register: r_new_docker_pid
     - assert:
         that: r_docker_pid.stdout != r_new_docker_pid.stdout
-
-
