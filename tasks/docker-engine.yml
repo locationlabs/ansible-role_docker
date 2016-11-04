@@ -19,8 +19,23 @@
     repo: 'deb https://apt.dockerproject.org/repo ubuntu-{{ ansible_distribution_release }} main'
     update_cache: yes
 
+# The package version for docker-engine looks something like this:
+#
+#   1.11.2-0~trusty
+#
+# The part before the dash is the Docker version. The "0" here is the "debian revision"
+# - that's there to allow the package builder to give you a new version of the package
+# even if the packaged software hasn't changed. For packages that use "debian revision",
+# the convention is to start with "-1"; "-0" generally means "we are opting out of this
+# debian revision stuff". All of the packages available in the docker repo have
+# revision "-0". That said, it *could* be set to something non-zero at some point in the
+# future. So, use a wildcard instead of 0 when specifying the path. Apt will search and,
+# if there are multiple matches, install the matching package with the highest version.
+# i.e. if there's a -0 and a -1 we'll get -1.
+#
+# Reference: https://www.debian.org/doc/debian-policy/ch-controlfields.html#s-f-Version
 - name: Install Docker Engine
   apt:
-    name: "docker-engine={{ docker_version }}-0~{{ ansible_distribution_release }}"
+    name: "docker-engine={{ docker_version }}-*~{{ ansible_distribution_release }}"
     state: present
   register: r_docker_package_install
