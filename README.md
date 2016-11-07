@@ -34,8 +34,8 @@ Role Variables
   - `docker_version` : this variable controls the version of Docker that is installed. Required.
     If version `1.5.0` is selected, LXC Docker will be used; otherwise the stated version of
     Docker Engine will be installed (if available).
-  - `docker_attempt_upgrade_fixes` : False by default. If True, the fixes described in "Upgrade
-    Support" will be attempted
+  - `docker_daemon_flags` : Empty by default. This variable holds flags that will be passed to
+    the Docker daemon on startup. (This is implemented by modifying the file `/etc/default/docker`.)
   - `cgroup_lite_pkg_state` : When installing on an Ubuntu 13.10 host, the role will install the
     `cgroup-lite` package to provide the required cgroups support. This variable can be set to
     `latest` - the default - or to `present`. In the former case, the package will be updated, if

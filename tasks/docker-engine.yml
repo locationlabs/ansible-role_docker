@@ -19,74 +19,23 @@
     repo: 'deb https://apt.dockerproject.org/repo ubuntu-{{ ansible_distribution_release }} main'
     update_cache: yes
 
-- name: see if docker is already installed
-  stat: path=/usr/bin/docker get_checksum=False
-  register: docker_exec_stat_result
-  always_run: True 
-
-- name: Determine installed version
-  command: docker --version
-  changed_when: False
-  always_run: True
-  register: docker_version_result
-  when: "{{ docker_exec_stat_result.stat.exists }}"
-
-# "docker --version" output is formatted like this:
+# The package version for docker-engine looks something like this:
 #
-#     Docker version 1.10.2, build c3959b1
+#   1.11.2-0~trusty
 #
-- name: store installed docker version
-  set_fact:
-    installed_docker_version: "{{ docker_version_result.stdout
-                                  | regex_replace('^Docker version ', '')
-                                  | regex_replace(', build [0-9a-f]+$', '') }}"
-  when: "{{ docker_exec_stat_result.stat.exists }}"
-
-- name: collect container data from before upgrade
-  collect_container_configs:
-  register: collect_container_configs_result
-  when: "{{ docker_exec_stat_result.stat.exists
-            and docker_attempt_upgrade_fixes }}"
-  always_run: True
-
-# It should be OK to just run the apt install of the new docker package, regardless of the
-# state of docker. However, there's an issue that sometimes occurs in that case, where the
-# processes for the containers that existed before the upgrade aren't stopped by the upgrade, but
-# instead are left hanging around with parent PID 1. Shutting down docker before the upgrade seems
-# to prevent this.
-- name: shut down docker before upgrade
-  service: name=docker state=stopped
-  when: "{{ docker_exec_stat_result.stat.exists and installed_docker_version != docker_version }}"
- 
+# The part before the dash is the Docker version. The "0" here is the "debian revision"
+# - that's there to allow the package builder to give you a new version of the package
+# even if the packaged software hasn't changed. For packages that use "debian revision",
+# the convention is to start with "-1"; "-0" generally means "we are opting out of this
+# debian revision stuff". All of the packages available in the docker repo have
+# revision "-0". That said, it *could* be set to something non-zero at some point in the
+# future. So, use a wildcard instead of 0 when specifying the path. Apt will search and,
+# if there are multiple matches, install the matching package with the highest version.
+# i.e. if there's a -0 and a -1 we'll get -1.
+#
+# Reference: https://www.debian.org/doc/debian-policy/ch-controlfields.html#s-f-Version
 - name: Install Docker Engine
   apt:
-    name: "docker-engine={{ docker_version }}-0~{{ ansible_distribution_release }}"
+    name: "docker-engine={{ docker_version }}-*~{{ ansible_distribution_release }}"
     state: present
-    dpkg_options: "force-confnew"
-  register: docker_engine_install
-
-# Some updates will break data volumes. There are two issues:
-#  - if upgrading from <1.9 to 1.10+, then fix the vfs links. If we're upgrading to a 1.9.x client,
-#    the Docker upgrade fixes that automatically.
-#  - if upgrading from <1.10 to 1.10+, then fix the container configs for containers with volumes.
-- name: handle repair of data volumes broken by updates
-  repair_docker_data_volumes:
-    fix_vfs_links: "{{ installed_docker_version | version_compare('1.9', '<')
-                       and docker_version | version_compare('1.10', '>=') }}"
-    fix_container_mountpoints: "{{ installed_docker_version | version_compare('1.10', '<')
-                                   and docker_version | version_compare('1.10', '>=') }}"
-    old_container_configs: "{{ collect_container_configs_result.configs | to_json }}"
-  when: "{{ docker_engine_install | changed 
-            and docker_exec_stat_result.stat.exists
-            and docker_attempt_upgrade_fixes }}"
-  register: repair_docker_data_volumes_result
-
-- name: start docker after repair of docker settings
-  service: name=docker state=started
-  when: "{{ repair_docker_data_volumes_result is defined
-            and repair_docker_data_volumes_result | changed }}"
-
-# If we just installed or upgraded Docker, re-read Docker-related facts.
-- name: reread facts about ansible_docker0
-  setup: filter=ansible_docker0
-  when: docker_engine_install|changed
+  register: r_docker_package_install
