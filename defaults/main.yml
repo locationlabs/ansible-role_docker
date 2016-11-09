@@ -8,3 +8,9 @@ docker_role_apt_cache_valid_time: 7200
 
 # These flags are passed to the Docker daemon on startup.
 docker_daemon_flags: ""
+
+
+# When we start / restart Docker, this role waits until it is ready before
+# proceeding. This variable controls how long we wait before giving up.
+# This value should be OK for all but the slowest servers.
+docker_daemon_startup_timeout_sec: 10

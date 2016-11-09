@@ -86,7 +86,7 @@
   command: docker info
   register: r_docker_info
   until: r_docker_info.rc == 0
-  retries: 10
+  retries: "{{ docker_daemon_startup_timeout_sec }}"
   delay: 1
 
 - name: reread docker facts
