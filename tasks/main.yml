@@ -82,6 +82,13 @@
 - name: Ensure that Docker is running
   service: name="docker" state=started
 
+- name: Wait until docker daemon is available
+  command: docker info
+  register: r_docker_info
+  until: r_docker_info.rc == 0
+  retries: 10
+  delay: 1
+
 - name: reread docker facts
   setup: filter=ansible_docker0
   when: r_etc_default_docker|changed or r_docker_package_install|changed

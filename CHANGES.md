@@ -1,3 +1,6 @@
+Version 2.2.1:
+ - wait for Docker to actually be running before re-reading ansible docker facts.
+
 Version 2.2:
  - Removed the upgrade fixes added in Version 2.1.
  - No longer pass the "--force-confnew" flag to apt when installing the Docker package.
