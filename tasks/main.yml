@@ -85,7 +85,8 @@
 - name: Wait until docker daemon is available
   command: docker info
   register: r_docker_info
-  until: r_docker_info.rc == 0
+  # need a special case here, or this always fails in check mode.
+  until: r_docker_info|skipped or r_docker_info.rc == 0
   retries: "{{ docker_daemon_startup_timeout_sec }}"
   delay: 1
 
