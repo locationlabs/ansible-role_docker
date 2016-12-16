@@ -6,17 +6,13 @@
 
 - name: Reboot instance
   command: /sbin/shutdown -r now
+  args:
+    removes: /var/run/reboot-required
   register: reboot_result
-  when:
-    - reboot_needed
-    - not is_vagrant
 
-- name: Reboot vagrant instance
+- name: Reload vagrant instance
   local_action: command vagrant reload "{{inventory_hostname}}"
-  register: reboot_result
-  when:
-    - reboot_needed
-    - is_vagrant
+  when: reboot_result|changed and is_vagrant
   become: false
 
 - name: Wait for instance to come online
@@ -29,4 +25,3 @@
     state: started
   when: reboot_result|changed
   become: false
-

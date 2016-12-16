@@ -45,10 +45,6 @@
   register: cgroup_lite_result
   when: ansible_distribution_version == '13.10'
 
-- name: Is reboot necessary?
-  set_fact:
-    reboot_needed: "{{(kernel_result or cgroup_lite_result or {'changed': False}) | changed}}"
-
 - include: reboot-and-wait.yml
 
 # Newer versions of Docker no longer require apparmor, but it seems like a good thing to have.
