@@ -3,7 +3,17 @@
 - name: Reboot instance
   command: /sbin/shutdown -r now
   register: reboot_result
-  when: reboot_needed
+  when:
+    - reboot_needed
+    - ansible_ssh_user != 'vagrant'
+
+- name: Reboot vagrant instance
+  local_action: command vagrant reload "{{inventory_hostname}}"
+  register: reboot_result
+  when:
+    - reboot_needed
+    - ansible_ssh_user == 'vagrant'
+  become: false
 
 - name: Wait for instance to come online
   local_action:
