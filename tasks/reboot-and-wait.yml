@@ -1,0 +1,18 @@
+---
+# reboot an Ubuntu machine if needed and wait for it to come back
+- name: Reboot instance
+  command: /sbin/shutdown -r now
+  register: reboot_result
+  when: reboot_needed
+
+- name: Wait for instance to come online
+  local_action:
+    module: wait_for
+    host: "{{ ansible_ssh_host|default(inventory_hostname) }}"
+    port: "{{ ansible_ssh_port|default(ssh_port) }}"
+    delay: 30
+    timeout: 600
+    state: started
+  when: reboot_result|changed
+  become: false
+
