@@ -11,25 +11,29 @@
   when: docker_version is not defined
 
 # https://docs.docker.com/installation/ubuntulinux/
-- name: Install trusty kernel onto 12.04
+- name: Install backported kernel on pre-16.04 LTS
   apt:
-    pkg: "{{ item }}"
+    pkg: "{{ item.name }}"
     state: latest
     update_cache: yes
     cache_valid_time: "{{ docker_role_apt_cache_valid_time }}"
   with_items:
-    - linux-image-generic-lts-trusty
-    - linux-headers-generic-lts-trusty
+    - name: linux-image-generic-lts-trusty
+      version: "12.04"
+    - name: linux-headers-generic-lts-trusty
+      version: "12.04"
+    - name: linux-image-generic-lts-xenial
+      version: "14.04"
   register: kernel_result
-  when: ansible_distribution_version == '12.04'
+  when: ansible_distribution_version == item.version
 
-- name: Install latest kernel extras for Ubuntu 13.04+
+- name: Install latest kernel extras for Ubuntu 13.04, 13.10
   apt:
     pkg: "linux-image-extra-{{ ansible_kernel }}"
     state: "{{ kernel_pkg_state }}"
     update_cache: yes
     cache_valid_time: "{{ docker_role_apt_cache_valid_time }}"
-  when: ansible_distribution_version != '12.04'
+  when: ansible_distribution_version in ['13.04', '13.10']
 
 # Fix for https://github.com/dotcloud/docker/issues/4568
 - name: Install cgroup-lite for Ubuntu 13.10
