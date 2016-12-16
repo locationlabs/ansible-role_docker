@@ -1,18 +1,22 @@
 ---
 # reboot an Ubuntu machine if needed and wait for it to come back
+- name: Detect vagrant instance
+  set_fact:
+    is_vagrant: "{{is_vagrant | default(ansible_ssh_user == 'vagrant')}}"
+
 - name: Reboot instance
   command: /sbin/shutdown -r now
   register: reboot_result
   when:
     - reboot_needed
-    - ansible_ssh_user != 'vagrant'
+    - not is_vagrant
 
 - name: Reboot vagrant instance
   local_action: command vagrant reload "{{inventory_hostname}}"
   register: reboot_result
   when:
     - reboot_needed
-    - ansible_ssh_user == 'vagrant'
+    - is_vagrant
   become: false
 
 - name: Wait for instance to come online
