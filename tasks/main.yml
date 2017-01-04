@@ -10,8 +10,15 @@
   fail: msg="Required variable \"docker_version\" is not defined."
   when: docker_version is not defined
 
-# https://docs.docker.com/installation/ubuntulinux/
-- name: Install backported kernel on pre-16.04 LTS
+# https://docs.docker.com/engine/installation/linux/ubuntulinux/#/prerequisites-by-ubuntu-version
+# - 12.04: Docker requires the 3.13 kernel version.
+#          Ensure the trusty kernel is installed.
+# - 14.04: Support aufs via the linux-image-extra-* kernel package.
+#          Achieve this with the xenial kernel, which depends on the
+#          corresponding extra package, to address issues with kernels
+#          before 3.19 at the same time.
+#          https://github.com/docker/docker/issues/21704#issuecomment-235365424
+- name: Install HWE kernel on pre-16.04 LTS
   apt:
     pkg: "{{ item.name }}"
     state: latest
