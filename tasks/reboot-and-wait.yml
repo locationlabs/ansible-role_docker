@@ -9,10 +9,11 @@
   args:
     removes: /var/run/reboot-required
   register: reboot_result
+  when: not is_vagrant
 
 - name: Reload vagrant instance
   local_action: command vagrant reload "{{inventory_hostname}}"
-  when: reboot_result|changed and is_vagrant
+  when: is_vagrant
   become: false
 
 - name: Wait for instance to come online
@@ -23,5 +24,4 @@
     delay: 30
     timeout: 600
     state: started
-  when: reboot_result|changed
   become: false

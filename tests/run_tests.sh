@@ -23,9 +23,9 @@ function before_test() {
    vagrant ssh-config | awk '
       BEGIN { entry = "[all]" };
       /^Host / { print entry; entry = $2 };
-      /^  HostName / { entry = entry " ansible_host=" $2 };
-      /^  User / { entry = entry " ansible_user=" $2 };
-      /^  Port / { entry = entry " ansible_port=" $2 };
+      /^  HostName / { entry = entry " ansible_ssh_host=" $2 };
+      /^  User / { entry = entry " ansible_ssh_user=" $2 };
+      /^  Port / { entry = entry " ansible_ssh_port=" $2 };
       /^  IdentityFile / { entry = entry " ansible_ssh_private_key_file=" $2 };
       END { print entry }' > $INVENTORY
 }
@@ -43,7 +43,6 @@ function after_test() {
 }
 
 ALL_TESTS="old_install new_install restart_on_config_change"
-
 function run_old_install_test() {
    run_ansible_playbook old_install.yml
 }

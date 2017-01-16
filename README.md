@@ -17,16 +17,16 @@ Docker versions.
 Upgrade Support
 ---------------
 
-Some Docker Engine upgrade paths have known issues. There's code in this role that attempts to
-resolve those issues, with minimum disruption, if those upgrade paths are encountered. The
-intention is to not require containers to be recreated.
+This role no longer directly supports upgrading docker from a previous version. Any additional
+steps required as a part of an upgrade should be taken care of in a separate role or playbook.
 
-This code isn't intended to catch everything; an attempt has been made to make it reasonable and
-non-harmful, but it hasn't been tested for all possible upgrade paths, nor with features like
-non-local storage drivers. With that in mind, this behavior is optional and is disabled by default.
 
-The issues we attempt to resolve are documented in the "repair_docker_data_volumes" module.
+Kernel Upgrade
+--------------
 
+This role currently supports upgrading the linux kernel for a few Ubuntu LTS releases in order
+to address known issues with docker. These steps are expected to be refactored into a separate
+role in the future.
 
 Role Variables
 --------------
@@ -41,9 +41,12 @@ Role Variables
     `latest` - the default - or to `present`. In the former case, the package will be updated, if
     necessary, when the role is run. In the latter, the package will only be added if it is not
     present.
-  - `kernel_pkg_state` : For 13.04+, this role will install a `linux-image-extra-<version>`
-    package. This parameter works the same way as `cgroup_lite_package_state`, except controlling
-    this package.
+  - `kernel_pkg_state` : The state of any kernel package installed as a part of this role.
+    This parameter works the same way as `cgroup_lite_package_state`, except controlling
+    kernel packages.
+  - `ssh_port`: Which port to poll to confirm the box is accessible via ssh.
+  - `docker_role_apt_cache_valid_time`: The apt cache valid time for this role. Used when running
+    apt commands.
 
 
 Testing

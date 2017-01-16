@@ -7,8 +7,12 @@
     # install very old version of Docker
     - role: docker
   tasks:
+    - include: check_kernel_install.yml
+
     - name: verify that Docker is running
       command: docker ps
+
+    # these two will error if no match is found
     - name: verify Docker client version
       shell: "docker version | grep 'Client version: {{ docker_version }}'"
     - name: verify Docker server version

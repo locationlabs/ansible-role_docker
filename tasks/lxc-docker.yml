@@ -20,3 +20,4 @@
 - name: Install LXC Docker
   apt: pkg="lxc-docker-{{ docker_version }}" state=present
   register: r_docker_package_install
+  when: not check_mode
