@@ -7,8 +7,6 @@
     # install recent version of Docker
     - role: docker
   tasks:
-    - include: check_kernel_install.yml
-
     - name: verify that Docker is running and accessible
       command: docker ps
     - name: get docker client version

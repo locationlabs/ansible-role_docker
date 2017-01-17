@@ -1,5 +1,5 @@
 ---
-# tasks file for docker.ubuntu
+# Main tasks file
 
 # noop to detect check mode for older versions of ansible.
 # http://docs.ansible.com/ansible/playbooks_checkmode.html#information-about-check-mode-in-variables
@@ -17,68 +17,19 @@
   fail: msg="Required variable \"docker_version\" is not defined."
   when: docker_version is not defined
 
-# https://docs.docker.com/engine/installation/linux/ubuntulinux/#/prerequisites-by-ubuntu-version
-# https://wiki.ubuntu.com/Kernel/LTSEnablementStack
-# - 12.04: Docker requires the 3.13 kernel version.
-#          Ensure the trusty kernel is installed.
-# - 14.04: Support aufs via the linux-image-extra-* kernel package.
-#          Achieve this with the xenial kernel, which depends on the
-#          corresponding extra package, to address issues with kernels
-#          before 3.19 at the same time.
-#          https://github.com/docker/docker/issues/21704#issuecomment-235365424
-- name: Install HWE kernel on pre-16.04 LTS
-  apt:
-    pkg: "{{ item.name }}"
-    state: "{{ kernel_pkg_state }}"
-    update_cache: yes
-    install_recommends: "{{ item.install_recommends|default('no') }}"
-    cache_valid_time: "{{ docker_role_apt_cache_valid_time }}"
-  with_items:
-    - name: linux-generic-lts-trusty
-      version: "12.04"
-      install_recommends: yes
-    - name: linux-image-generic-lts-trusty
-      version: "12.04"
-    - name: linux-headers-generic-lts-trusty
-      version: "12.04"
-    - name: linux-image-generic-lts-xenial
-      version: "14.04"
-      install_recommends: yes
-  register: kernel_result
-  when: ansible_distribution_version == item.version
-
-# - 14.04: docker documentation suggests also installing
-#          linux-image-extra-virtual package
-- name: Install latest kernel extras if needed
-  apt:
-    pkg: "{{ item.name }}"
-    state: "{{ kernel_pkg_state }}"
-    update_cache: yes
-    cache_valid_time: "{{ docker_role_apt_cache_valid_time }}"
-  with_items:
-    - name: "linux-image-extra-{{ ansible_kernel }}"
-      versions: ['13.04', '13.10']
-    - name: linux-image-extra-virtual
-      versions: ['16.04', '14.04']
-  register: linux_image_extra_result
-  when: ansible_distribution_version in item.versions
-
-# Fix for https://github.com/dotcloud/docker/issues/4568
-- name: Install cgroup-lite for Ubuntu 13.10
-  apt:
-    pkg: cgroup-lite
-    state: "{{ cgroup_lite_pkg_state }}"
-    update_cache: yes
-    cache_valid_time: "{{ docker_role_apt_cache_valid_time }}"
-  register: cgroup_lite_result
-  when: ansible_distribution_version == '13.10'
-
-- include: reboot-and-wait.yml
-  when: kernel_result|changed or linux_image_extra_result|changed or cgroup_lite_result|changed
-
 # Newer versions of Docker no longer require apparmor, but it seems like a good thing to have.
 - name: Install apparmor
   apt: pkg=apparmor state=present
+
+# Newer documentation suggests installing a few other (non kernel) packages
+# https://github.com/docker/docker.github.io/blob/9093e0a/engine/installation/linux/ubuntu.md#recommended-extra-packages
+# https://github.com/docker/docker.github.io/blob/9093e0a/engine/installation/linux/ubuntu.md#set-up-the-repository
+- name: Install a few recommended packages
+  apt: pkg="{{ item }}" state=present
+  with_items:
+    - curl
+    - apt-transport-https
+    - ca-certificates
 
 - name: Write /etc/default/docker config file
   template: src=etc_default_docker.j2 dest=/etc/default/docker
@@ -106,7 +57,7 @@
   register: r_docker_info
   # need a special case here, or this always fails in check mode.
   until: r_docker_info|skipped or r_docker_info.rc == 0
-  retries: "{{ docker_daemon_startup_timeout_sec }}"
+  retries: "{{ docker_daemon_startup_retries }}"
   delay: 1
 
 - name: Check if /etc/default/ufw exists

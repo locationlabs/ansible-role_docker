@@ -7,8 +7,6 @@
     # install very old version of Docker
     - role: docker
   tasks:
-    - include: check_kernel_install.yml
-
     - name: verify that Docker is running
       command: docker ps
 
