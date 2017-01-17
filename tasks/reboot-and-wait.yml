@@ -2,7 +2,7 @@
 # reboot an Ubuntu machine if needed and wait for it to come back
 - name: Detect vagrant instance
   set_fact:
-    is_vagrant: "{{is_vagrant | default(ansible_ssh_user == 'vagrant')}}"
+    is_vagrant: "{{is_vagrant | default(ansible_user_id == 'vagrant' or ansible_env['SUDO_USER'] == 'vagrant')}}"
 
 - name: Reboot instance
   command: /sbin/shutdown -r now
@@ -12,7 +12,7 @@
 
 - name: Reload vagrant instance
   local_action: command vagrant reload "{{inventory_hostname}}"
-  when: reboot_result|changed and is_vagrant
+  when: reboot_result|changed and is_vagrant|bool
   become: false
 
 - name: Wait for instance to come online
