@@ -1,0 +1,48 @@
+---
+# A basic provisioning script, update as needed.
+
+- name: Provision vagrant boxes
+  hosts: all
+  vars:
+    timezone: America/Los_Angeles
+    apt_cache_valid_time_sec: 86400  # 1 day
+
+  tasks:
+    - name: update apt cache
+      apt:
+        update_cache: yes
+        cache_valid_time: "{{ apt_cache_valid_time_sec }}"
+
+    # https://help.ubuntu.com/community/UbuntuTime#Using_the_Command_Line_.28unattended.29
+    - name: set timezone
+      copy:
+        content: "{{ timezone }}\\n"
+        dest: /etc/timezone
+        owner: root
+        group: root
+        mode: 0644
+        backup: yes
+      notify:
+        - update timezone
+
+    - name: get vagrant private key
+      slurp:
+        src: /home/vagrant/.ssh/authorized_keys
+      register: authorized_keys
+
+    # https://help.ubuntu.com/community/SSH/OpenSSH/Keys
+    - name: "create /root/.ssh"
+      file:
+        path: /root/.ssh
+        state: directory
+        mode: 0700
+
+    - name: copying vagrant private key to root user...
+      copy:
+        content: "{{ authorized_keys['content'] | b64decode }}"
+        dest: /root/.ssh/authorized_keys
+        mode: 0600
+
+  handlers:
+    - name: update timezone
+      command: dpkg-reconfigure --frontend noninteractive tzdata

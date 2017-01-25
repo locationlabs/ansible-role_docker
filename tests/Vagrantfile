@@ -3,10 +3,19 @@
 
 nodes = [
   {
-    :hostname => 'vagrant-docker-test',
+    :hostname => 'vagrant-docker-test-1404',
     :domain => '.wavemarket.com',
     :ip => '172.19.56.22',
     :box => 'bento/ubuntu-14.04',
+    :ram => '2048',
+    :cpus => 2,
+    :autostart => true
+  },
+  {
+    :hostname => 'vagrant-docker-test-1204',
+    :domain => '.wavemarket.com',
+    :ip => '172.19.56.20',
+    :box => 'bento/ubuntu-12.04',
     :ram => '2048',
     :cpus => 2,
     :autostart => true
@@ -53,19 +62,29 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
         vb.customize ["modifyvm", :id, "--natdnshostresolver1", "on"]
       end
 
-      node_config.vm.provision "shell", inline: $provision_shell_script
+      # Moved provisioning to run_tests.sh (uncomment if needed)
+      # Some basic provisioning that will likely be useful in most cases.
+      # Previously we did this with inline, but using ansible is probably better.
+      #node_config.vm.provision "ansible", playbook: "ansible_vagrant_provisioning.yml"
+
+      # Running a playbook generates an inventory file each time (**SO RUN THIS PROVISIONING LAST**).
+      #
+      # The inventory file will get generated at:
+      #    .vagrant/provisioners/ansible/inventory/vagrant_ansible_inventory
+      #
+      # Provisioning happens after each node is up and running and will result in partial
+      # inventories containing only the running nodes until the last node is provisioned.
+      # We don't need to worry about the partial inventories since the inventory
+      # file is overridden on each provisioning invocation (i.e. the last invocation will
+      # generate a full inventory and it will override any existing inventory).
+      node_config.vm.provision "ansible", run: "always" do |ansible|
+        ansible.playbook = "noop.yml"
+        ansible.limit = node[:hostname]
+        ansible.groups = {
+          "all"      => nodes.map{ |n| n[:hostname] },
+        }
+      end
     end
   end
 
 end
-
-$provision_shell_script = <<SCRIPT
-apt-get -qy update
-echo "Setting timezone..."
-echo "America/Los_Angeles" | sudo tee /etc/timezone
-sudo dpkg-reconfigure --frontend noninteractive tzdata
-echo "Copying vagrant private key to root user..."
-mkdir -p /root/.ssh
-cat /home/vagrant/.ssh/authorized_keys >> /root/.ssh/authorized_keys
-SCRIPT
-

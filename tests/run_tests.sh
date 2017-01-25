@@ -3,6 +3,7 @@
 BUILD_DIR=./build
 VENV_DIR=$BUILD_DIR/test_venv
 INVENTORY=$BUILD_DIR/inventory
+VAGRANT_INVENTORY=.vagrant/provisioners/ansible/inventory/vagrant_ansible_inventory
 
 function before_run() {
    if [ "$VIRTUAL_ENV" != "" ] ; then
@@ -18,16 +19,30 @@ function before_run() {
 }
 
 function before_test() {
+   # TODO:
+   # It might be faster to rollback to a snapshot taken before a run here
+   # since updating apt cache can take a bit of time.
+   # Unfortunately, it would require users installing more plugins or
+   # updating vagrant. Snapshots are built into vagrant 1.8.0:
+   # https://www.hashicorp.com/blog/vagrant-1-8.html
    vagrant up
 
-   vagrant ssh-config | awk '
-      BEGIN { entry = "[all]" };
-      /^Host / { print entry; entry = $2 };
-      /^  HostName / { entry = entry " ansible_ssh_host=" $2 };
-      /^  User / { entry = entry " ansible_ssh_user=" $2 };
-      /^  Port / { entry = entry " ansible_ssh_port=" $2 };
-      /^  IdentityFile / { entry = entry " ansible_ssh_private_key_file=" $2 };
-      END { print entry }' > $INVENTORY
+   # create a link to generated inventory file for convenience
+   # don't overwrite in case user wants to use a different inventory
+   if [ ! -e $INVENTORY ] ; then
+      ln -s $(readlink -f $VAGRANT_INVENTORY) $INVENTORY
+   fi
+
+   # This was a part of the Vagrantfile, but moved here for faster results.
+   provision_vagrant_hosts
+}
+
+function provision_vagrant_hosts() {
+   echo " ------------------------------ run provisioning script"
+   ansible-playbook -v -i $INVENTORY ansible_vagrant_provisioning.yml
+   local result=$?
+   echo " ------------------------------ return code: $result"
+   return $result
 }
 
 function run_ansible_playbook() {

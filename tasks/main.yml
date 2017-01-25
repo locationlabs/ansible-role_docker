@@ -72,6 +72,6 @@
   when: ufw_default_exists.stat.exists
 
 # this role modifies the host in ways which might have been cached
-# lets update all facts here to be sure we have ansible up to date.
+# let's update all facts here to be sure we have ansible up to date.
 - name: update facts about host
   setup:
