@@ -39,3 +39,4 @@
     name: "docker-engine={{ docker_version }}-*~{{ ansible_distribution_release }}"
     state: present
   register: r_docker_package_install
+  when: not check_mode

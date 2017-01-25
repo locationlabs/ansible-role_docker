@@ -1,0 +1,22 @@
+---
+# noop playbook used by Vagrantfile to auto generate inventory file. We call it noop
+# because idealy it would do nothing, but it is currently adding a variable to the
+# inventory in case we have users not yet running vagrant 1.8.0.
+
+# It is possible to set ansible_ssh_user with ansible but it requires vagrant 1.8.0
+# https://www.vagrantup.com/docs/provisioning/ansible_intro.html
+# so for now we run a play in here.
+
+# We only have a single host group, but we limit the inventory to just the host that
+# just got provisioned when we run this playbook.
+- hosts: all
+  tasks:
+    - name: define ansible_ssh_user as vagrant in vagrant_ansible_inventory
+      lineinfile:
+        line: |
+
+          [all:vars]
+          ansible_ssh_user=vagrant
+        state: present
+        insertafter: EOF
+        dest: /vagrant/.vagrant/provisioners/ansible/inventory/vagrant_ansible_inventory

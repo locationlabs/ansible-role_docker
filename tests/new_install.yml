@@ -2,7 +2,7 @@
 
 - hosts: all
   vars:
-    docker_version: 1.12.1
+    docker_version: 1.11.2
   roles:
     # install recent version of Docker
     - role: docker
@@ -15,7 +15,7 @@
       # variable - before or after the operation - that has '{{' in it.
       shell: 'OB="{" && docker version -f "$OB$OB .Client.Version }}"'
       register: r_docker_client_version
-    - name: get docker client version
+    - name: get docker server version
       shell: 'OB="{" && docker version -f "$OB$OB .Server.Version }}"'
       register: r_docker_server_version
     - name: check version results
@@ -23,3 +23,4 @@
         that:
           - r_docker_client_version.stdout == docker_version
           - r_docker_server_version.stdout == docker_version
+      when: not check_mode

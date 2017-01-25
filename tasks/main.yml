@@ -1,5 +1,12 @@
 ---
-# tasks file for docker.ubuntu
+# Main tasks file
+
+# noop to detect check mode for older versions of ansible.
+# http://docs.ansible.com/ansible/playbooks_checkmode.html#information-about-check-mode-in-variables
+- command: /bin/true
+  register: noop_result
+
+- set_fact: check_mode={{ noop_result|skipped }}
 
 # These are the version of Ubuntu for which this role has been tested.
 - name: Fail if not a new release of Ubuntu
@@ -10,53 +17,19 @@
   fail: msg="Required variable \"docker_version\" is not defined."
   when: docker_version is not defined
 
-# https://docs.docker.com/engine/installation/linux/ubuntulinux/#/prerequisites-by-ubuntu-version
-# - 12.04: Docker requires the 3.13 kernel version.
-#          Ensure the trusty kernel is installed.
-# - 14.04: Support aufs via the linux-image-extra-* kernel package.
-#          Achieve this with the xenial kernel, which depends on the
-#          corresponding extra package, to address issues with kernels
-#          before 3.19 at the same time.
-#          https://github.com/docker/docker/issues/21704#issuecomment-235365424
-- name: Install HWE kernel on pre-16.04 LTS
-  apt:
-    pkg: "{{ item.name }}"
-    state: latest
-    update_cache: yes
-    cache_valid_time: "{{ docker_role_apt_cache_valid_time }}"
-  with_items:
-    - name: linux-image-generic-lts-trusty
-      version: "12.04"
-    - name: linux-headers-generic-lts-trusty
-      version: "12.04"
-    - name: linux-image-generic-lts-xenial
-      version: "14.04"
-  register: kernel_result
-  when: ansible_distribution_version == item.version
-
-- name: Install latest kernel extras for Ubuntu 13.04, 13.10
-  apt:
-    pkg: "linux-image-extra-{{ ansible_kernel }}"
-    state: "{{ kernel_pkg_state }}"
-    update_cache: yes
-    cache_valid_time: "{{ docker_role_apt_cache_valid_time }}"
-  when: ansible_distribution_version in ['13.04', '13.10']
-
-# Fix for https://github.com/dotcloud/docker/issues/4568
-- name: Install cgroup-lite for Ubuntu 13.10
-  apt:
-    pkg: cgroup-lite
-    state: "{{ cgroup_lite_pkg_state }}"
-    update_cache: yes
-    cache_valid_time: "{{ docker_role_apt_cache_valid_time }}"
-  register: cgroup_lite_result
-  when: ansible_distribution_version == '13.10'
-
-- include: reboot-and-wait.yml
-
 # Newer versions of Docker no longer require apparmor, but it seems like a good thing to have.
 - name: Install apparmor
   apt: pkg=apparmor state=present
+
+# Newer documentation suggests installing a few other (non kernel) packages
+# https://github.com/docker/docker.github.io/blob/9093e0a/engine/installation/linux/ubuntu.md#recommended-extra-packages
+# https://github.com/docker/docker.github.io/blob/9093e0a/engine/installation/linux/ubuntu.md#set-up-the-repository
+- name: Install a few recommended packages
+  apt: pkg="{{ item }}" state=present
+  with_items:
+    - curl
+    - apt-transport-https
+    - ca-certificates
 
 - name: Write /etc/default/docker config file
   template: src=etc_default_docker.j2 dest=/etc/default/docker
@@ -73,22 +46,19 @@
 # if we changed the config, but didn't reinstall docker, then restart it
 - name: Restart docker on config change
   service: name=docker state=restarted
-  when: r_etc_default_docker|changed and not r_docker_package_install|changed
+  when: r_etc_default_docker|changed and not r_docker_package_install|changed and not check_mode
 
 - name: Ensure that Docker is running
   service: name="docker" state=started
+  when: not check_mode
 
 - name: Wait until docker daemon is available
   command: docker info
   register: r_docker_info
   # need a special case here, or this always fails in check mode.
   until: r_docker_info|skipped or r_docker_info.rc == 0
-  retries: "{{ docker_daemon_startup_timeout_sec }}"
+  retries: "{{ docker_daemon_startup_retries }}"
   delay: 1
-
-- name: reread docker facts
-  setup: filter=ansible_docker0
-  when: r_etc_default_docker|changed or r_docker_package_install|changed
 
 - name: Check if /etc/default/ufw exists
   stat: path=/etc/default/ufw
@@ -100,3 +70,8 @@
     regexp: "^DEFAULT_FORWARD_POLICY="
     line: "DEFAULT_FORWARD_POLICY=\"ACCEPT\""
   when: ufw_default_exists.stat.exists
+
+# this role modifies the host in ways which might have been cached
+# let's update all facts here to be sure we have ansible up to date.
+- name: update facts about host
+  setup:

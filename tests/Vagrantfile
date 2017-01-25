@@ -1,14 +1,90 @@
-Vagrant.configure(2) do |config|
-  
-  config.vm.box = "bento/ubuntu-14.04"
-  config.vm.network "private_network", type: "dhcp"
-  config.vm.provider :virtualbox do |vb|
-    vb.memory = 1024
-    vb.cpus = 1
-    vb.customize ["modifyvm", :id, "--natdnshostresolver1", "on"]
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+nodes = [
+  {
+    :hostname => 'vagrant-docker-test-1404',
+    :domain => '.wavemarket.com',
+    :ip => '172.19.56.22',
+    :box => 'bento/ubuntu-14.04',
+    :ram => '2048',
+    :cpus => 2,
+    :autostart => true
+  },
+  {
+    :hostname => 'vagrant-docker-test-1204',
+    :domain => '.wavemarket.com',
+    :ip => '172.19.56.20',
+    :box => 'bento/ubuntu-12.04',
+    :ram => '2048',
+    :cpus => 2,
+    :autostart => true
+  },
+]
+
+VAGRANTFILE_API_VERSION = "2"
+VM_DEFAULT_RAM = 512
+VM_DEFAULT_CPUS = 1
+LOCAL_BUILD_DIR="/var/tmp/#{ENV['USER']}/build/"
+
+Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
+
+  config.ssh.insert_key = false
+
+  if Vagrant.has_plugin?('vagrant-cachier')
+    config.cache.enable :apt
+  else
+    printf("** Install vagrant-cachier plugin to speedup deploy: `vagrant plugin install vagrant-cachier`.**\n")
   end
 
-  config.vm.define "vagrant-docker-test" do |node_config|
-    node_config.vm.hostname = "vagrant-docker-test"
+  if Vagrant.has_plugin?('vagrant-hostmanager')
+    config.hostmanager.enabled = true
+    config.hostmanager.manage_host = true
+  else
+    raise "** Install vagrant-hostmanager plugin: `vagrant plugin install vagrant-hostmanager`.**\n"
   end
+
+  nodes.each do |node|
+    config.vm.define node[:hostname], autostart: node[:autostart] do |node_config|
+      node_config.vm.box = node[:box]
+      node_config.vm.hostname = node[:hostname] + node[:domain]
+      node_config.vm.network :private_network, ip: node[:ip]
+
+      # setup a shared folder with the host's build folder
+      # to simplify installing local builds
+      if File.directory?(LOCAL_BUILD_DIR)
+        node_config.vm.synced_folder LOCAL_BUILD_DIR, LOCAL_BUILD_DIR
+      end
+
+      node_config.vm.provider :virtualbox do |vb|
+        vb.memory = node[:ram] || VM_DEFAULT_RAM
+        vb.cpus = node[:cpus] || VM_DEFAULT_CPUS
+        vb.customize ["modifyvm", :id, "--natdnshostresolver1", "on"]
+      end
+
+      # Moved provisioning to run_tests.sh (uncomment if needed)
+      # Some basic provisioning that will likely be useful in most cases.
+      # Previously we did this with inline, but using ansible is probably better.
+      #node_config.vm.provision "ansible", playbook: "ansible_vagrant_provisioning.yml"
+
+      # Running a playbook generates an inventory file each time (**SO RUN THIS PROVISIONING LAST**).
+      #
+      # The inventory file will get generated at:
+      #    .vagrant/provisioners/ansible/inventory/vagrant_ansible_inventory
+      #
+      # Provisioning happens after each node is up and running and will result in partial
+      # inventories containing only the running nodes until the last node is provisioned.
+      # We don't need to worry about the partial inventories since the inventory
+      # file is overridden on each provisioning invocation (i.e. the last invocation will
+      # generate a full inventory and it will override any existing inventory).
+      node_config.vm.provision "ansible", run: "always" do |ansible|
+        ansible.playbook = "noop.yml"
+        ansible.limit = node[:hostname]
+        ansible.groups = {
+          "all"      => nodes.map{ |n| n[:hostname] },
+        }
+      end
+    end
+  end
+
 end
