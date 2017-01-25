@@ -1,3 +1,9 @@
+Version 3.0:
+ - Removed any kernel upgrading and related variables. Moved to a new role.
+   See: https://github.com/locationlabs/ansible-role_docker-base
+ - Refactored testing.
+ - Ensure a few required packages are getting installed.  
+ 
 Version 2.2.1:
  - wait for Docker to actually be running before re-reading ansible docker facts.
 
