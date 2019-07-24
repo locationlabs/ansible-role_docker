@@ -41,7 +41,11 @@
 
 - name: Install Docker Engine
   include: docker-engine.yml
-  when: docker_version != '1.5.0'
+  when: docker_version != '1.5.0' and (ansible_distribution_version != '16.04')
+
+- name: Install Docker IO (CE)
+  include: docker-io.yml
+  when: ansible_distribution_version == '16.04'
 
 # if we changed the config, but didn't reinstall docker, then restart it
 - name: Restart docker on config change

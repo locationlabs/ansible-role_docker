@@ -1,0 +1,7 @@
+---
+
+- name: Install Docker IO
+  apt:
+    name: docker.io
+    state: present
+  register: r_docker_package_install
