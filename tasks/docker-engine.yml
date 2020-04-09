@@ -16,7 +16,7 @@
 
 - name: Add Docker Engine Repository
   apt_repository:
-    repo: 'deb https://apt.dockerproject.org/repo ubuntu-{{ ansible_distribution_release }} main'
+    repo: deb https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable
     update_cache: yes
 
 # The package version for docker-engine looks something like this:
