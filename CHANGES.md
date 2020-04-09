@@ -1,3 +1,10 @@
+Version 3.1:
+ - Update docker engine repo since https://apt.dockerproject.org/ was shutdown
+   on the 31st of March 2020
+
+Version 3.0.1:
+ - Add distribution name for docker 1.12.4+
+
 Version 3.0:
  - Removed any kernel upgrading and related variables. Moved to a new role.
    See: https://github.com/locationlabs/ansible-role_docker-base
